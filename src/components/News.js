@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import NewsItem from "./NewsItem";
 import Spinner from "./Spinner";
 import PropTypes from "prop-types";
+import InfiniteScroll from "react-infinite-scroll-component";
+
 
 export default class News extends Component {
   static defaultProps = {
@@ -21,8 +23,9 @@ export default class News extends Component {
     super(props);
     this.state = {
       articles: [],
-      loading: false,
+      loading: true,
       page: 1,
+      totalResults:0
     };
     document.title = `${this.cap(this.props.category)} - NewsMonkey`;
   }
@@ -62,15 +65,32 @@ export default class News extends Component {
       this.pro();
     }
   };
-
+  fetchMoreData = async() => {
+    this.setState({ page: this.state.page + 1 });
+    let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=135e3a4a5846493ea19137d7157df39d&page=${this.state.page}&pagesize=${this.props.pagesize}`;
+   
+    let data = await fetch(url);
+    let parseddata = await data.json();
+    this.setState({
+      articles: this.state.articles.concat(parseddata.articles),
+      totalResults: parseddata.totalResults,
+     
+    });
+  };
   render() {
     return (
-      <div className="container my-3">
+      <>
         <h1 className="text-center">NewsMonkey - Top {this.cap(this.props.category)} Headlines</h1>
-        {this.state.loading && <Spinner />}
+        {this.state.loading && <Spinner/>}
+        <InfiniteScroll
+          dataLength={this.state.articles.length}
+          next={this.fetchMoreData}
+          hasMore={this.state.articles.length !== this.state.totalResults}
+          loader={<h4><Spinner/></h4>}
+        >
+          <div className="container">
         <div className="row">
-          {!this.state.loading &&
-            this.state.articles.map((element) => {
+          {this.state.articles.map((element) => {
               return (
                 <div className="col-md-4" key={element.url}>
                   <NewsItem
@@ -98,28 +118,10 @@ export default class News extends Component {
               );
             })}
         </div>
-        <div className="container d-flex justify-content-between">
-          <button
-            disabled={this.state.page <= 1}
-            type="button"
-            className="btn btn-dark"
-            onClick={this.prevfun}
-          >
-            &larr;Previous
-          </button>
-          <button
-            disabled={
-              this.state.page + 1 >
-              Math.ceil(this.state.totalResults / this.props.pagesize)
-            }
-            type="button"
-            className="btn btn-dark"
-            onClick={this.nextfun}
-          >
-            Next &rarr;
-          </button>
         </div>
-      </div>
+        </InfiniteScroll>
+        
+      </>
     );
   }
 }
